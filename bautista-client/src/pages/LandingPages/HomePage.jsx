@@ -1,8 +1,58 @@
+import { useEffect, useState } from 'react';
 import Button from '../../components/Button';
 import banner from '../../assets/img/nu_bulldogex_banner.jpg';
-import products from '../../assets/product-content.js'; 
+import placeholderImage from '../../assets/img/placeholder-product.png';
+import { fetchCategories, fetchProducts } from '../../services/ProductService';
+import { fetchAllOrders } from '../../services/OrderService';
 
 const HomePage = () => {
+    const [categories, setCategories] = useState([]);
+    const [error, setError] = useState('');
+    const [stats, setStats] = useState({
+        products: 0,
+        categories: 0,
+        orders: 0,
+    });
+
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const [categoryResponse, productResponse, orderResponse] = await Promise.all([
+                    fetchCategories(),
+                    fetchProducts({ limit: 100 }),
+                    fetchAllOrders({ limit: 1 }),
+                ]);
+
+                const categoryData = categoryResponse.data.data;
+                const productData = productResponse.data.data;
+
+                const categoriesWithImages = categoryData.map((category) => {
+                    const categoryProduct = productData.find(
+                        (product) =>
+                            product.category?._id === category._id
+                    );
+
+                    return {
+                        ...category,
+                        image: categoryProduct?.images?.[0] || placeholderImage,
+                    };
+                });
+
+                setCategories(categoriesWithImages);
+
+                setStats({
+                    products: productResponse.data.pagination?.total ?? productData.length,
+                    categories: categoryResponse.data.pagination?.total ?? categoryData.length,
+                    orders: orderResponse.data.pagination?.total ?? 0,
+                });
+            } catch (requestError) {
+                console.error('Error fetching categories:', requestError);
+                setError('Unable to load categories.');
+            }
+        };
+
+        loadCategories();
+    }, []);
     return (
         <div className="flex w-full flex-col gap-6">
             <section className="relative min-h-[28rem] overflow-hidden border-y-2 border-zinc-900 bg-zinc-900 px-4 py-10 sm:px-6 lg:px-8">
@@ -45,29 +95,23 @@ const HomePage = () => {
                     <h2 className="mt-2 text-2xl font-lexend font-semibold text-zinc-900">Quick shopping blocks</h2>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-3">
                     <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">08</p>
+                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">{stats.products}</p>
                         <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
                             Products
                         </p>
                     </div>
                     <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">08</p>
+                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">{stats.categories}</p>
                         <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
                             Categories
                         </p>
                     </div>
                     <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">67</p>
+                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">{stats.orders}</p>
                         <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
                             Orders
-                        </p>
-                    </div>
-                    <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f]    p-5">
-                        <p className="text-2xl font-lexend font-bold text-[#ffd41d]">11</p>
-                        <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
-                            Pickup Slots
                         </p>
                     </div>
                 </div>
@@ -81,36 +125,44 @@ const HomePage = () => {
                     <h2 className="mt-2 text-2xl font-lexend font-semibold text-zinc-900">Simple store cards</h2>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                    {products.slice(0, 3).map((product, index) => (
-                        <article
-                        key={product.name}
-                        className="rounded-3xl border-2 border-zinc-900 bg-zinc-100 p-4 flex flex-col"
-                        >
-                        
-                        <div className="aspect-[4/3] overflow-hidden rounded-[1.25rem] bg-zinc-200">
-                            <img
-                            src={product.image}
-                            alt={product.title}
-                            className="w-full h-full object-cover"
-                            />
-                        </div>
+                {error ? (
+                    <p className="font-lexend text-zinc-600">{error}</p>
+                ) : (
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {categories.slice(0, 3).map((category) => (
+                            <article
+                                key={category._id}
+                                className="flex flex-col rounded-3xl border-2 border-zinc-900 bg-zinc-100 p-4"
+                            >
+                                <div className="aspect-[4/3] overflow-hidden rounded-[1.25rem] bg-zinc-200">
+                                    <img
+                                        src={category.image}
+                                        alt={category.categoryName}
+                                        onError={(event) => {
+                                            event.currentTarget.onerror = null;
+                                            event.currentTarget.src = placeholderImage;
+                                        }}
+                                        className="h-full w-full object-cover"
+                                    />
+                                </div>
 
-                        <h3 className="mt-4 text-lg font-lexend font-semibold text-zinc-900">
-                            {product.category}
-                        </h3>
+                                <h3 className="mt-4 text-lg font-lexend font-semibold text-zinc-900">
+                                    {category.categoryName}
+                                </h3>
 
-                        <p className="mt-3 mb-4 text-sm leading-6 font-lexend text-zinc-600">
-                            {product.content.join(', ')}
-                        </p>
+                                <p className="mb-4 mt-3 text-sm leading-6 font-lexend text-zinc-600">
+                                    {category.description || 'Browse products in this category.'}
+                                </p>
 
-                        <div className="mt-auto">
-                            <Button to="/products" variant="primary">View {product.category}</Button>
-                        </div>
-
-                        </article>
-                    ))}
-                </div>
+                                <div className="mt-auto">
+                                    <Button to="/products" variant="primary">
+                                        View Products
+                                    </Button>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                )}
             </section>
         </div>
     );

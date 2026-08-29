@@ -14,7 +14,7 @@ const Footer = () => {
           <p class="text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] mb-3">
             Navigation
           </p>
-          <ul class="space-y-2 text-sm">
+          <ul class="space-y-2 text-sm text-zinc-200">
             <li><a href="/" class="hover:underline font-lexend" >Home</a></li>
             <li><a href="/about" class="hover:underline font-lexend">About</a></li>
             <li><a href="/products" class="hover:underline font-lexend">Products</a></li>
@@ -25,7 +25,7 @@ const Footer = () => {
           <p class="text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] mb-3">
             Shop
           </p>
-          <ul class="space-y-2 text-sm">
+          <ul class="space-y-2 text-sm text-zinc-200">
             <li><a href="/products" class="hover:underline font-lexend">T-Shirts</a></li>
             <li><a href="/products" class="hover:underline font-lexend">Hats</a></li>
             <li><a href="/products" class="hover:underline font-lexend">Stickers</a></li>

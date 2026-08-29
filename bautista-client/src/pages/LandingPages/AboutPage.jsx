@@ -1,8 +1,39 @@
+import { useEffect, useState } from 'react';
 import Button from '../../components/Button';
 import banner from '../../assets/img/nu_bulldogex_banner.jpg';
 import products from '../../assets/product-content.js';
+import { fetchCategories, fetchProducts } from '../../services/ProductService';
+import { fetchAllOrders } from '../../services/OrderService';
 
 const AboutPage = () => {
+  const [stats, setStats] = useState({
+    products: 0,
+    categories: 0,
+    orders: 0,
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const [categoryResponse, productResponse, orderResponse] = await Promise.all([
+          fetchCategories(),
+          fetchProducts({ limit: 100 }),
+          fetchAllOrders({ limit: 1 }),
+        ]);
+
+        setStats({
+          products: productResponse.data.pagination?.total ?? productResponse.data.data.length,
+          categories: categoryResponse.data.pagination?.total ?? categoryResponse.data.data.length,
+          orders: orderResponse.data.pagination?.total ?? 0,
+        });
+      } catch (requestError) {
+        console.error('Error fetching store stats:', requestError);
+      }
+    };
+
+    loadStats();
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-6">
       <section className="border-y-2 border-zinc-900 bg-zinc-50 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -46,29 +77,23 @@ const AboutPage = () => {
             <h2 className="mt-2 text-2xl font-lexend font-semibold text-zinc-900">Quick shopping blocks</h2>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-3">
             <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">08</p>
+                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">{stats.products}</p>
                 <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
                     Products
                 </p>
             </div>
             <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">08</p>
+                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">{stats.categories}</p>
                 <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
                     Categories
                 </p>
             </div>
             <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">67</p>
+                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">{stats.orders}</p>
                 <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
                     Orders
-                </p>
-            </div>
-            <div className="rounded-3xl border-2 border-zinc-900 bg-[#35408f] p-5">
-                <p className="text-2xl font-lexend font-bold text-[#ffd41d]">11</p>
-                <p className="mt-2 text-[11px] font-lexend font-semibold uppercase tracking-[0.24em] text-[#ffd41d]">
-                    Pickup Slots
                 </p>
             </div>
         </div>
