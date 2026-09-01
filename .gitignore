@@ -1,0 +1,5 @@
+bautista-server/.env
+bautista-server/node_modules
+
+bautista-client/.env
+bautista-client/node_modules
