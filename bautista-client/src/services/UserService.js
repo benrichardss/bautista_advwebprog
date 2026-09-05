@@ -12,7 +12,7 @@ const authHeaders = () => ({
 });
 
 // Fetch users
-export const fetchUsers = (params = {}) => API.get('/', { params });
+export const fetchUsers = (params = {}) => API.get('/', { params, ...authHeaders(), });
 // Create user
 export const createUser = (user) => API.post('/register', {...user, confirmPassword: user.password});
 // Update user

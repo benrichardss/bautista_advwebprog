@@ -1,22 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const reviewController = require("../controllers/reviewController");
-const authMiddleware = require("../middleware/authMiddleware");
+const authentication = require("../middleware/authentication");
+const authorization = require("../middleware/authorization");
 
 // Get all reviews (admin dashboard)
-router.get("/", authMiddleware, reviewController.getAllReviews);
+router.get("/", authentication, authorization("admin"), reviewController.getAllReviews);
 
 // Get all reviews for a seller's products (seller dashboard)
 router.get(
     "/seller/:sellerId",
-    authMiddleware,
+    authentication,
+    authorization("seller", "admin"),
     reviewController.getReviewsBySeller
 );
 
 // Create new review for a product
 router.post(
     "/product/:productId",
-    authMiddleware,
+    authentication,
+    authorization("buyer"),
     reviewController.createReview
 );
 
@@ -26,14 +29,14 @@ router.get("/product/:productId", reviewController.getReviewsByProduct);
 // Get all reviews by a reviewer
 router.get(
     "/reviewer/:reviewerId",
-    authMiddleware,
+    authentication,
     reviewController.getReviewsByReviewer
 );
 
 // Get all products to review
 router.get(
   "/reviewer/:reviewerId/to-review",
-  authMiddleware,
+  authentication,
   reviewController.getProductsToReview
 );
 
@@ -43,7 +46,7 @@ router.get("/:reviewId", reviewController.getReviewById);
 // Update review
 router.put(
     "/:reviewId",
-    authMiddleware,
+    authentication,
     reviewController.updateReview
 );
 
@@ -51,7 +54,7 @@ router.put(
 // Delete review
 router.delete(
     "/:reviewId",
-    authMiddleware,
+    authentication,
     reviewController.deleteReview
 );
 

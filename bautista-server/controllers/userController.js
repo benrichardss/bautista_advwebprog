@@ -2,6 +2,7 @@ const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { HttpStatus } = require("../config/constants");
+const { SECRET_KEY } = require("../config/config");
 
 // Register new user
 exports.registerUser = async (req, res) => {
@@ -51,8 +52,8 @@ exports.registerUser = async (req, res) => {
 
         // Create JWT token
         const token = jwt.sign(
-            { id: savedUser._id, email: savedUser.email },
-            process.env.JWT_SECRET || "your-secret-key",
+            { id: savedUser._id, email: savedUser.email, role: savedUser.role },
+            SECRET_KEY,
             { expiresIn: "7d" }
         );
 
@@ -117,8 +118,8 @@ exports.loginUser = async (req, res) => {
 
         // Create JWT token
         const token = jwt.sign(
-            { id: user._id, email: user.email },
-            process.env.JWT_SECRET || "your-secret-key",
+            { id: user._id, email: user.email, role: user.role },
+            SECRET_KEY,
             { expiresIn: "7d" }
         );
 
@@ -170,9 +171,34 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+const verifyUserOwnership = (req, res) => {
+    if (!req.user) {
+        res.status(HttpStatus.UNAUTHORIZED).json({
+            success: false,
+            message: "Authentication required",
+        });
+        return false;
+    }
+
+    const isOwner = String(req.user.id) === String(req.params.id);
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAdmin) {
+        res.status(HttpStatus.FORBIDDEN).json({
+            success: false,
+            message: "You can only modify your own account",
+        });
+        return false;
+    }
+
+    return true;
+};
+
 // Update user profile
 exports.updateUserProfile = async (req, res) => {
     try {
+        if (!verifyUserOwnership(req, res)) return;
+
         const { id } = req.params;
         const { firstName, lastName, email, contactNumber, address, role, isActive, password } = req.body;
 
@@ -229,6 +255,8 @@ exports.updateUserProfile = async (req, res) => {
 // Change password
 exports.changePassword = async (req, res) => {
     try {
+        if (!verifyUserOwnership(req, res)) return;
+
         const { id } = req.params;
         const { currentPassword, newPassword, confirmNewPassword } = req.body;
 

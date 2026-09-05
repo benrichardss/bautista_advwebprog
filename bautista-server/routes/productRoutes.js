@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/productController");
+const authentication = require("../middleware/authentication");
+const authorization = require("../middleware/authorization");
 
 // Get all products with filters
 router.get("/", productController.getAllProducts);
@@ -15,12 +17,12 @@ router.get("/seller/:sellerId", productController.getProductsBySeller);
 router.get("/:id", productController.getProductById);
 
 // Create new product
-router.post("/", productController.createProduct);
+router.post("/", authentication, authorization("seller", "admin"), productController.createProduct);
 
 // Update product
-router.patch("/:id", productController.updateProduct);
+router.patch("/:id", authentication, authorization("seller", "admin"), productController.updateProduct);
 
 // Delete product
-router.delete("/:id", productController.deleteProduct);
+router.delete("/:id", authentication, authorization("seller", "admin"), productController.deleteProduct);
 
 module.exports = router;

@@ -3,7 +3,7 @@ import Button from '../../components/Button';
 import banner from '../../assets/img/nu_bulldogex_banner.jpg';
 import placeholderImage from '../../assets/img/placeholder-product.png';
 import { fetchCategories, fetchProducts } from '../../services/ProductService';
-import { fetchAllOrders } from '../../services/OrderService';
+import { fetchOrderCount } from '../../services/OrderService';
 
 const HomePage = () => {
     const [categories, setCategories] = useState([]);
@@ -20,7 +20,7 @@ const HomePage = () => {
                 const [categoryResponse, productResponse, orderResponse] = await Promise.all([
                     fetchCategories(),
                     fetchProducts({ limit: 100 }),
-                    fetchAllOrders({ limit: 1 }),
+                    fetchOrderCount(),
                 ]);
 
                 const categoryData = categoryResponse.data.data;
@@ -43,7 +43,7 @@ const HomePage = () => {
                 setStats({
                     products: productResponse.data.pagination?.total ?? productData.length,
                     categories: categoryResponse.data.pagination?.total ?? categoryData.length,
-                    orders: orderResponse.data.pagination?.total ?? 0,
+                    orders: orderResponse.data.data?.total ?? 0,
                 });
             } catch (requestError) {
                 console.error('Error fetching categories:', requestError);

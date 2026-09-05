@@ -17,6 +17,9 @@ export const checkoutCart = (userId, orderDetails) =>
 export const fetchMyOrders = (userId) =>
   ORDER_API.get(`/user/${userId}`, authHeaders());
 
+export const fetchOrderCount = () =>
+    ORDER_API.get("/count");
+
 export const fetchAllOrders = (params = {}) =>
   ORDER_API.get('/', { params });
 

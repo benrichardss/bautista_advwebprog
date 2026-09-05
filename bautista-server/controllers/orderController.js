@@ -231,6 +231,24 @@ exports.getAllOrders = async (req, res) => {
     }
 };
 
+exports.getOrderCount = async (req, res) => {
+    try {
+        const total = await Order.countDocuments();
+
+        res.status(HttpStatus.OK).json({
+            success: true,
+            data: {
+                total,
+            },
+        });
+    } catch (error) {
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 exports.getOrdersForDashboard = async (req, res) => {
     try {
         const { role, sellerId } = req.query;

@@ -3,7 +3,7 @@ import Button from '../../components/Button';
 import banner from '../../assets/img/nu_bulldogex_banner.jpg';
 import products from '../../assets/product-content.js';
 import { fetchCategories, fetchProducts } from '../../services/ProductService';
-import { fetchAllOrders } from '../../services/OrderService';
+import { fetchOrderCount } from '../../services/OrderService';
 
 const AboutPage = () => {
   const [stats, setStats] = useState({
@@ -18,13 +18,13 @@ const AboutPage = () => {
         const [categoryResponse, productResponse, orderResponse] = await Promise.all([
           fetchCategories(),
           fetchProducts({ limit: 100 }),
-          fetchAllOrders({ limit: 1 }),
+          fetchOrderCount(),
         ]);
 
         setStats({
           products: productResponse.data.pagination?.total ?? productResponse.data.data.length,
           categories: categoryResponse.data.pagination?.total ?? categoryResponse.data.data.length,
-          orders: orderResponse.data.pagination?.total ?? 0,
+          orders: orderResponse.data.data?.total ?? 0,
         });
       } catch (requestError) {
         console.error('Error fetching store stats:', requestError);

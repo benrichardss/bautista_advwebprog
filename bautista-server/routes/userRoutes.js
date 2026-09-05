@@ -1,18 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
+const authentication = require("../middleware/authentication");
+const authorization = require("../middleware/authorization");
 
-// User authentication routes
 router.post("/register", userController.registerUser);
 router.post("/login", userController.loginUser);
 
-// User profile routes
-router.get("/:id", userController.getUserProfile);
-router.put("/:id", userController.updateUserProfile);
-router.put("/:id/change-password", userController.changePassword);
+router.get("/:id", authentication, userController.getUserProfile);
+router.put("/:id", authentication, userController.updateUserProfile);
+router.put(
+    "/:id/change-password",
+    authentication,
+    userController.changePassword
+);
 
-// Admin routes
-router.get("/", userController.getAllUsers);
-router.delete("/:id", userController.deleteUser);
+router.get("/", authentication, authorization("admin"), userController.getAllUsers);
+router.delete("/:id", authentication, authorization("admin"), userController.deleteUser);
 
 module.exports = router;

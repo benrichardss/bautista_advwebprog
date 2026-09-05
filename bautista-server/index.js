@@ -67,6 +67,14 @@ app.use((req, res, next) => {
     next();
 });
 
+app.get("/health", (req, res) => {
+    console.log("Health check passed");
+    res.status(200).json({
+        success: true,
+        message: "API is running",
+    });
+});
+
 app.use("/api/product", productRoutes);
 app.use("/api/v1/product", productV1Routes);
 app.use("/api/category", categoryRoutes);
@@ -81,4 +89,13 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+
+    try {
+        const response = await fetch(`http://localhost:${PORT}/health`);
+        console.log(`Health check status: ${response.status}`);
+    } catch (error) {
+        console.error("Health check failed:", error.message);
+    }
+});
