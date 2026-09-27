@@ -93,13 +93,17 @@ const DashProductListPage = () => {
     description: '',
     price: '',
     stock: '',
-    images: '',
     seller: '',
     category: '',
     condition: 'New',
     status: 'Available',
   });
   const [errors, setErrors] = useState({});
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [imageError, setImageError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -173,15 +177,19 @@ const DashProductListPage = () => {
   const handleOpen = () => {
     setIsEditing(false);
     setEditProductId(null);
+    setImageFile(null);
+    setImagePreview('');
+    setImageError('');
+    setSaveError('');
+    setRemoveImage(false);
     setNewProduct({
       productName: '',
       description: '',
       price: '',
       stock: '',
-      images: '',
       seller: user?.role === 'seller' ? user.id || user._id : '',
       category: '',
-      condition: 'New', 
+      condition: 'New',
       status: 'Available',
     });
     setOpen(true);
@@ -191,6 +199,11 @@ const DashProductListPage = () => {
     setOpen(false);
     setIsEditing(false);
     setEditProductId(null);
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(false);
+    setImageError('');
+    setSaveError('');
   };
 
   const handleEdit = (id) => {
@@ -208,12 +221,17 @@ const DashProductListPage = () => {
       return;
     }
 
+    setImageFile(null);
+    setImagePreview(product.images?.[0] || '');
+    setImageError('');
+    setSaveError('');
+    setRemoveImage(false);
+
     setNewProduct({
       productName: product.productName || '',
       description: product.description || '',
       price: product.price ?? '',
       stock: product.stock ?? '',
-      images: product.images?.join(', ') || '',
       seller: product.seller?._id || product.seller || '',
       category: product.category?._id || product.category || '',
       condition: product.condition || 'New',
@@ -235,23 +253,23 @@ const DashProductListPage = () => {
       price: Number(newProduct.price),
       stock: Number(newProduct.stock),
       status: stock === 0 ? 'Sold' : 'Available',
-      images: newProduct.images
-        .split(',')
-        .map((image) => image.trim())
-        .filter(Boolean),
+      removeImage,
     };
 
     try {
       if (isEditing) {
-        await updateProduct(editProductId, payload);
+        await updateProduct(editProductId, payload, imageFile);
       } else {
-        await createProduct(payload);
+        await createProduct(payload, imageFile);
       }
 
       await loadProducts();
       handleClose();
     } catch (error) {
       console.error('Error saving product:', error);
+      setSaveError(
+        error.response?.data?.message || 'Unable to save the product.'
+      );
     }
   };
 
@@ -263,13 +281,13 @@ const DashProductListPage = () => {
       [name]: value,
       ...(name === 'stock'
         ? {
-            status:
-              value !== '' && Number(value) === 0
-                ? 'Sold'
-                : value !== ''
-                  ? 'Available'
-                  : current.status,
-          }
+          status:
+            value !== '' && Number(value) === 0
+              ? 'Sold'
+              : value !== ''
+                ? 'Available'
+                : current.status,
+        }
         : {}),
     }));
 
@@ -277,6 +295,47 @@ const DashProductListPage = () => {
       ...current,
       [name]: '',
     }));
+  };
+
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+    if (!allowedTypes.has(file.type)) {
+      setImageFile(null);
+      setRemoveImage(false)
+      setImagePreview('');
+      setImageError('Choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImageFile(null);
+      setRemoveImage(false)
+      setImagePreview('');
+      setImageError('Image must be 5 MB or smaller.');
+      return;
+    }
+
+    setImageFile(file);
+    setImageError('');
+    setSaveError('');
+
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.onerror = () => setImageError('Could not preview this image.');
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setImageError('');
+    setRemoveImage(true);
   };
 
   const inputField = (icon, props, ...children) => (
@@ -325,6 +384,10 @@ const DashProductListPage = () => {
 
     if (!newProduct.seller) {
       nextErrors.seller = 'Seller is required';
+    }
+
+    if (imageError) {
+      nextErrors.image = imageError;
     }
 
     setErrors(nextErrors);
@@ -476,12 +539,12 @@ const DashProductListPage = () => {
             >
               Products
             </Typography>
-            <Button variant="contained" startIcon={<AddCircleIcon />} onClick={handleOpen} sx={{ width: { xs: '100%', sm: 'auto', backgroundColor: "#18181b"} }}>
+            <Button variant="contained" startIcon={<AddCircleIcon />} onClick={handleOpen} sx={{ width: { xs: '100%', sm: 'auto', backgroundColor: "#18181b" } }}>
               Add Product
             </Button>
           </Box>
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 3, pb: 3}}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 3, pb: 3 }}>
             <TextField
               size="small"
               label="Search products"
@@ -608,8 +671,8 @@ const DashProductListPage = () => {
                         value: newProduct.condition,
                         onChange: handleProductChange,
                       },
-                        <MenuItem value="New">New</MenuItem>,
-                        <MenuItem value="Used">Used</MenuItem>
+                      <MenuItem value="New">New</MenuItem>,
+                      <MenuItem value="Used">Used</MenuItem>
                     )}
 
                     {inputField(
@@ -640,13 +703,66 @@ const DashProductListPage = () => {
                       ))
                     )}
 
-                  {inputField(<ImageIcon />, {
-                    name: "images",
-                    label: "Image URLs",
-                    helperText: "Separate multiple URLs with commas",
-                    value: newProduct.images,
-                    onChange: handleProductChange,
-                  })}
+                  <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ flex: 1 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        minWidth: 32,
+                        color: 'text.secondary',
+                        pt: 0.75,
+                      }}
+                    >
+                      <ImageIcon />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1, minWidth: 0 }}>
+                      <Button
+                        component="label"
+                        variant="outlined"
+                        sx={{ alignSelf: 'flex-start' }}
+                      >
+                        Choose product image
+                        <input
+                          hidden
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleImageChange}
+                        />
+                      </Button>
+
+                      <Typography variant="caption" color="text.secondary">
+                        JPEG, PNG, or WebP. Maximum file size: 5 MB.
+                      </Typography>
+
+                      {imagePreview && (
+                        <Box
+                          component="img"
+                          src={imagePreview}
+                          alt="Product image preview"
+                          sx={{
+                            width: 180,
+                            height: 140,
+                            objectFit: 'cover',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                          }}
+                        />
+                      )}
+
+                      {imagePreview && (
+                        <Button color="error" onClick={handleRemoveImage}>
+                          Remove image
+                        </Button>
+                      )}
+
+                      {(imageError || saveError) && (
+                        <Typography color="error" variant="body2">
+                          {imageError || saveError}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Stack>
 
                   {inputField(<ShortTextIcon />, {
                     name: "description",

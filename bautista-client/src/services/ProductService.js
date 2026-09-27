@@ -24,11 +24,31 @@ export const fetchProductById = (id) =>
 export const fetchProductsBySeller = (sellerId) =>
   PRODUCT_API.get(`/seller/${sellerId}`);
 
-export const createProduct = (product) =>
-  PRODUCT_API.post('/', product, authHeaders());
+const createProductFormData = (product, imageFile) => {
+  const formData = new FormData();
 
-export const updateProduct = (id, product) =>
-  PRODUCT_API.patch(`/${id}`, product, authHeaders());
+  Object.entries(product).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value));
+    }
+  });
+
+  if (imageFile) {
+    formData.append('image', imageFile);
+  }
+
+  return formData;
+};
+
+export const createProduct = (product, imageFile) =>
+  PRODUCT_API.post('/', createProductFormData(product, imageFile), authHeaders());
+
+export const updateProduct = (id, product, imageFile) =>
+  PRODUCT_API.patch(
+    `/${id}`,
+    createProductFormData(product, imageFile),
+    authHeaders()
+  );
 
 export const fetchCategories = () =>
   CATEGORY_API.get('/');

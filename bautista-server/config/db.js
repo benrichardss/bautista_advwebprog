@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { MONGO_DB_URL, SALT, SECRET_KEY, PORT } = require("./config");
+const { MONGO_DB_URL } = require("./config");
 
 const connectDB = async () => {
     try {

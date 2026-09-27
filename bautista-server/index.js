@@ -13,6 +13,7 @@ const userRoutes = require("./routes/userRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const logRoutes = require("./routes/logRoutes");
 const { HttpStatus } = require("./config/constants");
 
 const Product = require("./models/productModel");
@@ -34,38 +35,43 @@ console.log("Order:", Order.modelName);
 console.log("All Mongoose schemas loaded successfully.");
 
 const app = express();
+const helmet = require("helmet");
+const { auditLoggerMiddleware } = require("./middleware/auditLoggerMiddleware");
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:      ["'self'"],
+      scriptSrc:       ["'self'"],
+      styleSrc:        ["'self'", "'unsafe-inline'"],
+      imgSrc:          ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+      connectSrc:      ["'self'"],
+      fontSrc:         ["'self'", "data:"],
+      objectSrc:       ["'none'"],
+      frameAncestors:  ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  frameguard:     { action: "sameorigin" },           // X-Frame-Options: SAMEORIGIN
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }, // Referrer-Policy
+}));
 
 connectDB();
 
 app.use(express.json());
+app.use(auditLoggerMiddleware);
 
 app.use(jsonParser);
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
 
 const corsOptions = {
-    origin: "*",
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
-    preflightContinue: false,
-    optionsSuccessStatus: HttpStatus.NO_CONTENT,
+  origin: "http://localhost:5173",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Accept", "Content-Type", "Authorization"],
 };
-app.options("", cors(corsOptions));
-app.use(cors(corsOptions));
 
-app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization"
-    );
-    res.setHeader(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-    );
-    next();
-});
+app.use(cors(corsOptions));
 
 app.get("/health", (req, res) => {
     console.log("Health check passed");
@@ -82,10 +88,21 @@ app.use("/api/user", userRoutes);
 app.use("/api/review", reviewRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/order", orderRoutes);
+app.use("/api/log", logRoutes);
 
 app.use((err, req, res, next) => {
+    if (err.name === "MulterError") {
+        const tooLarge = err.code === "LIMIT_FILE_SIZE";
+        return res.status(tooLarge ? 413 : HttpStatus.BAD_REQUEST).json({
+            success: false,
+            message: tooLarge
+                ? "Image must be 5 MB or smaller."
+                : err.message
+        });
+    }
+
     console.error(err.stack);
-    res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: "Server Error" });
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: "Server Error" });
 });
 
 const PORT = process.env.PORT || 5000;

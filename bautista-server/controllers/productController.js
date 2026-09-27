@@ -1,6 +1,16 @@
 const Product = require("../models/productModel");
 const Category = require("../models/categoryModel");
 const { HttpStatus } = require("../config/constants");
+const cloudinary = require("../config/cloudinary");
+const { Readable } = require("stream");
+
+const uploadToCloudinary = (buffer) => new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+        { folder: "bulldogs-exchange/products", resource_type: "image" },
+        (error, result) => error ? reject(error) : resolve(result)
+    );
+    Readable.from(buffer).pipe(stream);
+});
 
 // Get all products with filters, pagination, and sorting
 exports.getAllProducts = async (req, res) => {
@@ -159,7 +169,7 @@ exports.getProductById = async (req, res) => {
 // Create new product
 exports.createProduct = async (req, res) => {
     try {
-        const { productName, description, price, stock, images, seller, category, condition } = req.body;
+        const { productName, description, price, stock, images, imagePublicIds, seller, category, condition } = req.body;
 
         // Validate required fields
         if (!productName || !price || !seller || !category) {
@@ -178,16 +188,21 @@ exports.createProduct = async (req, res) => {
             });
         }
 
+        const uploadedImage = req.file
+            ? await uploadToCloudinary(req.file.buffer)
+            : null;
+
         const product = new Product({
             productName,
             description,
             price,
             stock,
-            images: images || [],
+            images: uploadedImage ? [uploadedImage.secure_url] : [],
+            imagePublicIds: uploadedImage ? [uploadedImage.public_id] : [],
             seller,
             category,
             condition,
-            status: "Available"
+            status: Number(stock) === 0 ? "Sold" : "Available"
         });
 
         const savedProduct = await product.save();
@@ -220,6 +235,17 @@ exports.updateProduct = async (req, res) => {
                 success: false,
                 message: "Product not found"
             });
+        }
+
+        if (req.body.removeImage === 'true') {
+            product.images = [];
+            product.imagePublicIds = [];
+        }
+
+        if (req.file) {
+            const uploadedImage = await uploadToCloudinary(req.file.buffer);
+            product.images = [uploadedImage.secure_url];
+            product.imagePublicIds = [uploadedImage.public_id];
         }
 
         // Check if category exists if provided
@@ -344,6 +370,40 @@ exports.getProductsByCategory = async (req, res) => {
         });
     } catch (error) {
         res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+exports.uploadProductImage = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(HttpStatus.BAD_REQUEST).json({
+                success: false,
+                message: "Image file is required"
+            });
+        }
+
+        const result = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { folder: "bulldogs-exchange/products" },
+                (error, uploadedImage) => {
+                    if (error) reject(error);
+                    else resolve(uploadedImage);
+                }
+            );
+
+            Readable.from(req.file.buffer).pipe(stream);
+        });
+
+        return res.status(HttpStatus.OK).json({
+            success: true,
+            imageUrl: result.secure_url,
+            publicId: result.public_id
+        });
+    } catch (error) {
+        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message
         });
